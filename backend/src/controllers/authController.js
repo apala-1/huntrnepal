@@ -301,4 +301,38 @@ const getMe = (req, res) => {
   );
 };
 
-module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe };
+// ─── CHANGE PASSWORD ──────────────────────────────────────────────
+const changePassword = (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  // Password policy check
+  if (newPassword.length < 8 ||
+      !/[A-Z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword) ||
+      !/[!@#$%^&*]/.test(newPassword)) {
+    return res.status(400).json({ 
+      error: 'Password must be 8+ chars with uppercase, number and special character' 
+    });
+  }
+
+  db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], async (err, user) => {
+    if (err || !user) return res.status(404).json({ error: 'User not found' });
+
+    const match = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+
+    logAudit(user.id, 'PASSWORD_CHANGED', 'user', user.id,
+      req.ip, req.get('User-Agent'), 'Password changed successfully');
+
+    res.json({ message: 'Password updated successfully' });
+  });
+};
+
+module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe, changePassword };

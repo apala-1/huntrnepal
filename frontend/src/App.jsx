@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
+import Settings from './pages/Settings';
 
 const App = () => {
   return (
@@ -25,6 +26,12 @@ const App = () => {
           <Route path="/dashboard" element={
             <ProtectedRoute roles={['researcher']}>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
 
