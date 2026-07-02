@@ -9,6 +9,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
 import Settings from './pages/Settings';
+import Programs from './pages/Programs';
+import ProgramDetail from './pages/ProgramDetail';
 
 const App = () => {
   return (
@@ -21,6 +23,10 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+
+          {/* Public */}
+          <Route path="/programs" element={<Programs />} />
+          <Route path="/programs/:id" element={<ProgramDetail />} />
 
           {/* Researcher only */}
           <Route path="/dashboard" element={
