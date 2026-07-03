@@ -6,11 +6,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Unauthorized from './pages/Unauthorized';
 import Settings from './pages/Settings';
+import Unauthorized from './pages/Unauthorized';
 import Programs from './pages/Programs';
 import ProgramDetail from './pages/ProgramDetail';
+import CreateProgram from './pages/CreateProgram';
+import SubmitReport from './pages/SubmitReport';
+import ReportDetail from './pages/ReportDetail';
+import ResearcherDashboard from './pages/ResearcherDashboard';
+import CompanyDashboard from './pages/CompanyDashboard';
 
 const App = () => {
   return (
@@ -18,30 +22,46 @@ const App = () => {
       <AuthProvider>
         <Navbar />
         <Routes>
-          {/* Public routes */}
+          {/* Public */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-
-          {/* Public */}
           <Route path="/programs" element={<Programs />} />
           <Route path="/programs/:id" element={<ProgramDetail />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+
+          {/* Any logged in user */}
+          <Route path="/settings" element={
+            <ProtectedRoute><Settings /></ProtectedRoute>
+          } />
+          <Route path="/reports/:id" element={
+            <ProtectedRoute><ReportDetail /></ProtectedRoute>
+          } />
 
           {/* Researcher only */}
           <Route path="/dashboard" element={
             <ProtectedRoute roles={['researcher']}>
-              <Dashboard />
+              <ResearcherDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/reports/submit" element={
+            <ProtectedRoute roles={['researcher']}>
+              <SubmitReport />
             </ProtectedRoute>
           } />
 
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Settings />
+          {/* Company only */}
+          <Route path="/dashboard/company" element={
+            <ProtectedRoute roles={['company']}>
+              <CompanyDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/programs/create" element={
+            <ProtectedRoute roles={['company']}>
+              <CreateProgram />
             </ProtectedRoute>
           } />
 
-          {/* Catch all */}
           <Route path="*" element={<Unauthorized />} />
         </Routes>
       </AuthProvider>

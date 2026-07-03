@@ -1,17 +1,22 @@
 const router = require('express').Router();
-const { 
-  getAllPrograms, getProgram, 
-  createProgram, updateProgram, getMyPrograms 
-} = require('../controllers/programsController');
 const { authenticate, authorize } = require('../middleware/auth');
+const {
+  submitReport, getMyReports, getReport,
+  getCompanyReports, updateReportStatus, getAllReports
+} = require('../controllers/reportsController');
 
-// Public
-router.get('/', getAllPrograms);
-router.get('/:id', getProgram);
+// Researcher
+router.post('/', authenticate, authorize('researcher'), submitReport);
+router.get('/my', authenticate, authorize('researcher'), getMyReports);
 
-// Company only
-router.post('/', authenticate, authorize('company'), createProgram);
-router.put('/:id', authenticate, authorize('company'), updateProgram);
-router.get('/company/mine', authenticate, authorize('company'), getMyPrograms);
+// Company
+router.get('/company', authenticate, authorize('company'), getCompanyReports);
+router.put('/:id/status', authenticate, authorize('company'), updateReportStatus);
+
+// Admin
+router.get('/all', authenticate, authorize('admin'), getAllReports);
+
+// ⚠️ Vulnerable route - no ownership check (IDOR)
+router.get('/:id', authenticate, getReport);
 
 module.exports = router;
