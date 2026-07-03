@@ -301,22 +301,12 @@ const getMe = (req, res) => {
   );
 };
 
-// ─── CHANGE PASSWORD ──────────────────────────────────────────────
-const changePassword = (req, res) => {
+// ─── CHANGE PASSWORD ─────────────────────────────────────────────
+const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
-
-  // Password policy check
-  if (newPassword.length < 8 ||
-      !/[A-Z]/.test(newPassword) ||
-      !/[0-9]/.test(newPassword) ||
-      !/[!@#$%^&*]/.test(newPassword)) {
-    return res.status(400).json({ 
-      error: 'Password must be 8+ chars with uppercase, number and special character' 
-    });
+    return res.status(400).json({ error: 'Both fields are required' });
   }
 
   db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], async (err, user) => {
@@ -325,13 +315,27 @@ const changePassword = (req, res) => {
     const match = await bcrypt.compare(currentPassword, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
 
+    // Prevent reusing same password
+    const samePassword = await bcrypt.compare(newPassword, user.password_hash);
+    if (samePassword) {
+      return res.status(400).json({ error: 'New password must be different from current' });
+    }
+
     const newHash = await bcrypt.hash(newPassword, 12);
-    db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+    db.run(
+      'UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?',
+      [newHash, req.user.userId],
+      (err) => {
+        if (err) return res.status(500).json({ error: 'Failed to update password' });
 
-    logAudit(user.id, 'PASSWORD_CHANGED', 'user', user.id,
-      req.ip, req.get('User-Agent'), 'Password changed successfully');
+        logAudit(req.user.userId, 'PASSWORD_CHANGED', 'user', req.user.userId,
+          req.ip, req.get('User-Agent'), 'Password changed successfully');
 
-    res.json({ message: 'Password updated successfully' });
+        // Clear cookie to force re-login after password change
+        res.clearCookie('token');
+        res.json({ message: 'Password updated. Please log in again.' });
+      }
+    );
   });
 };
 
