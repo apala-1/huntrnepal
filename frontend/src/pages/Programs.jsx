@@ -1,23 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 
 const Programs = () => {
   const [programs, setPrograms] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    api.get('/programs')
-      .then(res => setPrograms(res.data.programs))
-      .catch(() => setPrograms([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchPrograms = async (searchTerm = '') => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/programs?search=${searchTerm}`);
+      setPrograms(res.data.programs);
+    } catch {
+      setError('Failed to load programs');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = programs.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase()) ||
-    p.company_name.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { fetchPrograms(); }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchPrograms(search);
+  };
+
+  const formatReward = (min, max) => {
+    return `NPR ${Number(min).toLocaleString()} – ${Number(max).toLocaleString()}`;
+  };
 
   return (
     <div className="container" style={{ padding: '2rem 1.5rem' }}>
@@ -25,42 +37,60 @@ const Programs = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        gap: '1rem'
+        marginBottom: '1.5rem'
       }}>
         <div>
           <h1>Bounty Programs</h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-            {programs.length} active program{programs.length !== 1 ? 's' : ''}
+            Find vulnerabilities, earn rewards
           </p>
         </div>
+      </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} style={{ 
+        display: 'flex', 
+        gap: '1rem', 
+        marginBottom: '2rem' 
+      }}>
         <input
+          type="text"
           placeholder="Search programs..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ 
+            flex: 1,
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             color: 'var(--text)',
-            padding: '0.6rem 1rem',
-            width: '220px'
+            padding: '0.7rem 1rem'
           }}
         />
-      </div>
+        <button 
+          type="submit" 
+          className="btn btn-primary"
+          style={{ width: 'auto', padding: '0.7rem 1.5rem' }}
+        >
+          Search
+        </button>
+      </form>
+
+      {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading programs...</p>
-      ) : filtered.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>
+          Loading programs...
+        </p>
+      ) : programs.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
           <p style={{ color: 'var(--text-muted)' }}>
-            {search ? 'No programs match your search.' : 'No programs yet. Check back soon!'}
+            No programs found. {search && 'Try a different search term.'}
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filtered.map(program => (
+          {programs.map(program => (
             <Link 
               key={program.id} 
               to={`/programs/${program.id}`}
@@ -70,47 +100,57 @@ const Programs = () => {
                 cursor: 'pointer',
                 transition: 'border-color 0.2s',
                 ':hover': { borderColor: 'var(--primary)' }
-              }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-              >
+              }}>
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem'
+                  gap: '1rem'
                 }}>
-                  <div>
-                    <h3 style={{ marginBottom: '0.2rem' }}>{program.title}</h3>
-                    <p style={{ color: 'var(--primary)', fontSize: '0.875rem' }}>
-                      {program.company_name}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.75rem',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <h3 style={{ fontSize: '1.1rem', color: 'var(--text)' }}>
+                        {program.title}
+                      </h3>
+                      <span className="badge badge-info">Active</span>
+                    </div>
+                    <p style={{ 
+                      color: 'var(--text-muted)', 
+                      fontSize: '0.875rem',
+                      marginBottom: '0.75rem'
+                    }}>
+                      {program.description.substring(0, 150)}
+                      {program.description.length > 150 ? '...' : ''}
                     </p>
+                    <span style={{ 
+                      color: 'var(--text-muted)', 
+                      fontSize: '0.8rem'
+                    }}>
+                      by {program.company_name}
+                    </span>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', minWidth: '160px' }}>
                     <div style={{ 
                       color: 'var(--success)', 
                       fontWeight: 700,
-                      fontSize: '1.1rem'
+                      fontSize: '1rem'
                     }}>
-                      NPR {Number(program.min_reward).toLocaleString()} – {Number(program.max_reward).toLocaleString()}
+                      {formatReward(program.min_reward, program.max_reward)}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {program.report_count} report{program.report_count !== 1 ? 's' : ''} submitted
+                    <div style={{ 
+                      color: 'var(--text-muted)', 
+                      fontSize: '0.75rem',
+                      marginTop: '0.3rem'
+                    }}>
+                      Reward Range
                     </div>
                   </div>
                 </div>
-                <p style={{ 
-                  color: 'var(--text-muted)', 
-                  fontSize: '0.875rem',
-                  marginTop: '0.8rem',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}>
-                  {program.description}
-                </p>
               </div>
             </Link>
           ))}
