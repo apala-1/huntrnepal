@@ -15,6 +15,7 @@ import SubmitReport from './pages/SubmitReport';
 import ReportDetail from './pages/ReportDetail';
 import ResearcherDashboard from './pages/ResearcherDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
+import AdminPanel from './pages/AdminPanel';
 
 const App = () => {
   return (
@@ -59,6 +60,13 @@ const App = () => {
           <Route path="/programs/create" element={
             <ProtectedRoute roles={['company']}>
               <CreateProgram />
+            </ProtectedRoute>
+          } />
+
+          {/* Admin only */}
+          <Route path="/admin" element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminPanel />
             </ProtectedRoute>
           } />
 
