@@ -3,6 +3,46 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
+const PayButton = ({ reportId, rewardAmount }) => {
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState('');
+
+  const handlePay = async () => {
+    setPaying(true);
+    setPayError('');
+    try {
+      const res = await api.post('/payments/initiate', { report_id: reportId });
+      // Redirect to Khalti payment page
+      window.location.href = res.data.paymentUrl;
+    } catch (err) {
+      setPayError(err.response?.data?.error || 'Payment initiation failed');
+      setPaying(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ background: 'rgba(34,197,94,0.05)', borderColor: 'var(--success)' }}>
+      <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--success)' }}>
+        💰 Pay Researcher via Khalti
+      </h3>
+      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+        Reward amount: <strong style={{ color: 'var(--success)' }}>
+          NPR {Number(rewardAmount).toLocaleString()}
+        </strong>
+      </p>
+      {payError && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{payError}</div>}
+      <button
+        className="btn btn-primary"
+        onClick={handlePay}
+        disabled={paying}
+        style={{ background: 'var(--success)' }}
+      >
+        {paying ? 'Redirecting to Khalti...' : '💳 Pay via Khalti'}
+      </button>
+    </div>
+  );
+};
+
 const STATUS_COLORS = {
   pending:  { bg: '#fef9c3', color: '#854d0e' },
   triaging: { bg: '#dbeafe', color: '#1e40af' },
@@ -166,6 +206,12 @@ const ReportDetail = () => {
               <div className={`alert ${updateMsg.includes('success') ? 'alert-success' : 'alert-error'}`}>
                 {updateMsg}
               </div>
+            )}
+            {/* Payment section */}
+            {report.status === 'accepted' && report.reward_amount && (
+            <div style={{ marginBottom: '1.5rem' }}>
+                <PayButton reportId={id} rewardAmount={report.reward_amount} />
+            </div>
             )}
             <form onSubmit={handleStatusUpdate}>
               <div className="form-group">

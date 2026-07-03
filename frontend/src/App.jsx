@@ -16,6 +16,7 @@ import ReportDetail from './pages/ReportDetail';
 import ResearcherDashboard from './pages/ResearcherDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import AdminPanel from './pages/AdminPanel';
+import PaymentVerify from './pages/PaymentVerify';
 
 const App = () => {
   return (
@@ -67,6 +68,12 @@ const App = () => {
           <Route path="/admin" element={
             <ProtectedRoute roles={['admin']}>
               <AdminPanel />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/payments/verify" element={
+            <ProtectedRoute>
+              <PaymentVerify />
             </ProtectedRoute>
           } />
 
