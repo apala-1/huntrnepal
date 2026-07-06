@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const { authenticate } = require('../middleware/auth');
+const { validateRegistration } = require('../middleware/validate');
 const {
   register, login, logout,
   setupMfa, verifyMfa, verifyMfaLogin,
@@ -42,7 +43,7 @@ const resetLimiter = rateLimit({
 });
 
 // Public routes
-router.post('/register', registerLimiter, register);
+router.post('/register', registerLimiter, validateRegistration, register);
 router.post('/login', loginLimiter, login);
 router.post('/forgot-password', resetLimiter, forgotPassword);
 router.post('/reset-password', resetLimiter, resetPassword);
