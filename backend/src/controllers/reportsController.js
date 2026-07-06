@@ -86,15 +86,18 @@ const getMyReports = (req, res) => {
 };
 
 // ─── GET SINGLE REPORT ───────────────────────────────────────────
+// ✅ FIXED: Ownership and role check before returning report
 const getReport = (req, res) => {
   const { id } = req.params;
+  const { userId, role } = req.user;
 
   db.get(`
     SELECT 
       r.*,
       u.username as researcher_username,
       bp.title as program_title,
-      c.company_name
+      c.company_name,
+      c.user_id as company_user_id
     FROM reports r
     JOIN users u ON r.researcher_id = u.id
     JOIN bounty_programs bp ON r.program_id = bp.id
@@ -103,6 +106,24 @@ const getReport = (req, res) => {
   `, [id], (err, report) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (!report) return res.status(404).json({ error: 'Report not found' });
+
+    // Admin sees all
+    if (role === 'admin') return res.json({ report });
+
+    // Researcher sees only their own reports
+    if (role === 'researcher' && report.researcher_id !== userId) {
+      return res.status(403).json({ 
+        error: 'Access denied. You can only view your own reports.' 
+      });
+    }
+
+    // Company sees only reports on their programs
+    if (role === 'company' && report.company_user_id !== userId) {
+      return res.status(403).json({ 
+        error: 'Access denied. This report does not belong to your program.' 
+      });
+    }
+
     res.json({ report });
   });
 };
