@@ -60,10 +60,9 @@ const CommentsSection = ({ reportId, userRole }) => {
                   {new Date(c.created_at).toLocaleString()}
                 </span>
               </div>
-              {/* ⚠️ INTENTIONAL XSS: dangerouslySetInnerHTML on comments */}
-              <p style={{ fontSize: '0.875rem' }}
-                dangerouslySetInnerHTML={{ __html: c.comment }}
-              />
+              <p style={{ fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+                {c.comment}
+              </p>
             </div>
           ))}
         </div>

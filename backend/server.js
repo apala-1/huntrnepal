@@ -22,6 +22,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+const xss = require('xss');
+
+// ✅ SECURITY: Sanitize all incoming request body strings against XSS
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object') {
+    const sanitizeValue = (val) => {
+      if (typeof val === 'string') return xss(val);
+      if (typeof val === 'object' && val !== null) {
+        Object.keys(val).forEach(k => { val[k] = sanitizeValue(val[k]); });
+      }
+      return val;
+    };
+    req.body = sanitizeValue(req.body);
+  }
+  next();
+});
+
 // HTTP request logging
 app.use(morgan('dev'));
 

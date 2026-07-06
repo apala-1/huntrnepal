@@ -76,10 +76,7 @@ const ProgramDetail = () => {
           <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-muted)' }}>
             ABOUT THIS PROGRAM
           </h2>
-          <p 
-  style={{ lineHeight: 1.8 }}
-  dangerouslySetInnerHTML={{ __html: program.description }}
-/>
+          <p style={{ lineHeight: 1.8 }}>{program.description}</p>
         </div>
 
         <div className="card">
