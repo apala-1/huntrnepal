@@ -1,6 +1,6 @@
 const db = require('../config/database');
 
-// ⚠️ VULNERABILITY: No ownership check — any user can comment on any report
+// VULNERABILITY: No ownership check — any user can comment on any report
 // Also stores raw HTML in comment — Stored XSS via comments
 const addComment = (req, res) => {
   const { report_id, comment } = req.body;

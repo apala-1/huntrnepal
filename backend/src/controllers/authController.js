@@ -89,8 +89,7 @@ const register = (req, res) => {
 };
 
 // ─── LOGIN ───────────────────────────────────────────────────────
-// NOTE: No rate limiting here intentionally - this is a vulnerability
-// we will exploit in penetration testing (Phase 8) then fix (Phase 6)
+// No rate limiting here - this is a vulnerability
 const login = (req, res) => {
   const { email, password } = req.body;
 

@@ -86,10 +86,6 @@ const getMyReports = (req, res) => {
 };
 
 // ─── GET SINGLE REPORT ───────────────────────────────────────────
-// ⚠️ INTENTIONAL VULNERABILITY: No ownership check here
-// Any logged-in user can view any report by changing the ID
-// This is an IDOR vulnerability - we exploit this in pen testing
-// Fix: add ownership/role check before returning data
 const getReport = (req, res) => {
   const { id } = req.params;
 
