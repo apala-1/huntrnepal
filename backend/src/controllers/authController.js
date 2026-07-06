@@ -340,4 +340,93 @@ const changePassword = async (req, res) => {
   });
 };
 
-module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe, changePassword };
+// ─── UPDATE PROFILE ──────────────────────────────────────────────
+const updateProfile = (req, res) => {
+  const { bio, website, twitter, location } = req.body;
+
+  // Basic length validation
+  if (bio && bio.length > 500) {
+    return res.status(400).json({ error: 'Bio cannot exceed 500 characters' });
+  }
+
+  db.run(
+    'UPDATE users SET bio = ?, website = ?, twitter = ?, location = ? WHERE id = ?',
+    [bio || '', website || '', twitter || '', location || '', req.user.userId],
+    (err) => {
+      if (err) return res.status(500).json({ error: 'Failed to update profile' });
+
+      logAudit(req.user.userId, 'PROFILE_UPDATED', 'user', req.user.userId,
+        req.ip, req.get('User-Agent'), 'Profile information updated');
+
+      res.json({ message: 'Profile updated successfully' });
+    }
+  );
+};
+
+// ─── FORGOT PASSWORD ─────────────────────────────────────────────
+// ⚠️ INTENTIONAL VULNERABILITY: 
+// 1. Math.random() is NOT cryptographically secure - token is predictable
+// 2. Token returned directly in response - should only go via email
+// 3. No expiry on reset token
+const forgotPassword = (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  db.get('SELECT id, email FROM users WHERE email = ?', [email], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    // ⚠️ VULNERABILITY: We confirm whether email exists (user enumeration)
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with this email' });
+    }
+
+    // ⚠️ VULNERABILITY: Math.random() is predictable
+    const resetToken = Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, '0');
+
+    // Store token (reusing mfa_secret column for demo purposes)
+    db.run('UPDATE users SET mfa_secret = ? WHERE id = ?', [resetToken, user.id]);
+
+    logAudit(user.id, 'PASSWORD_RESET_REQUESTED', 'user', user.id,
+      req.ip, null, 'Password reset token generated');
+
+    // ⚠️ VULNERABILITY: Token returned in API response instead of sent via email only
+    res.json({
+      message: 'Password reset token generated',
+      debug_token: resetToken,  // NEVER do this in production
+      note: 'In production this would be sent to email only'
+    });
+  });
+};
+
+// ─── RESET PASSWORD (use forgot-password token) ──────────────────
+const resetPassword = (req, res) => {
+  const { email, token, newPassword } = req.body;
+
+  if (!email || !token || !newPassword) {
+    return res.status(400).json({ error: 'All fields required' });
+  }
+
+  db.get('SELECT * FROM users WHERE email = ? AND mfa_secret = ?',
+    [email, token], async (err, user) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      if (!user) return res.status(401).json({ error: 'Invalid or expired token' });
+
+      const newHash = await bcrypt.hash(newPassword, 12);
+      db.run(
+        'UPDATE users SET password_hash = ?, mfa_secret = NULL WHERE id = ?',
+        [newHash, user.id]
+      );
+
+      logAudit(user.id, 'PASSWORD_RESET_COMPLETED', 'user', user.id,
+        req.ip, null, 'Password reset successfully');
+
+      res.json({ message: 'Password reset successfully. Please log in.' });
+    });
+};
+
+module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe, changePassword, updateProfile, forgotPassword, resetPassword };
