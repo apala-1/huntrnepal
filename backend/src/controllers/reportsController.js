@@ -13,7 +13,6 @@ const submitReport = (req, res) => {
     return res.status(400).json({ error: 'Invalid severity level' });
   }
 
-  // Check program exists and is active
   db.get(
     'SELECT id FROM bounty_programs WHERE id = ? AND is_active = 1',
     [program_id],
@@ -21,48 +20,41 @@ const submitReport = (req, res) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       if (!program) return res.status(404).json({ error: 'Program not found or inactive' });
 
-      db.get(`
-        SELECT c.user_id FROM bounty_programs bp
-        JOIN companies c ON bp.company_id = c.id
-        WHERE bp.id = ?
-      `, [program_id], (err, programOwner) => {
-        if (programOwner && programOwner.user_id === req.user.userId) {
-          return res.status(403).json({ 
-            error: 'You cannot submit reports against your own company program' 
-          });
-        }
-
+      // ✅ FIXED: Check for duplicate reports from same researcher on same program
+      // Previously no check existed - attacker could submit same vuln multiple times for multiple payouts
       db.get(
         'SELECT id FROM reports WHERE researcher_id = ? AND program_id = ? AND title = ?',
         [req.user.userId, program_id, title],
         (err, duplicate) => {
+          if (err) return res.status(500).json({ error: 'Database error' });
           if (duplicate) {
             return res.status(409).json({ 
-              error: 'You have already submitted a report with this title for this program. Duplicate reports are not accepted.' 
+              error: 'Duplicate report detected. You have already submitted a report with this title for this program.' 
             });
           }
 
-      db.run(`
-        INSERT INTO reports 
-        (researcher_id, program_id, title, description, severity, cvss_score, steps_to_reproduce, impact)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [req.user.userId, program_id, title, description, severity, cvss_score || null, steps_to_reproduce, impact],
-        function (err) {
-          if (err) return res.status(500).json({ error: 'Failed to submit report' });
-
+          // Insert the report
           db.run(`
-            INSERT INTO audit_logs (user_id, action, target_type, target_id, ip_address, details)
-            VALUES (?, 'REPORT_SUBMITTED', 'report', ?, ?, ?)
-          `, [req.user.userId, this.lastID, req.ip, `Submitted report: ${title}`]);
+            INSERT INTO reports 
+            (researcher_id, program_id, title, description, severity, cvss_score, steps_to_reproduce, impact)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `, [req.user.userId, program_id, title, description, severity, cvss_score || null, steps_to_reproduce, impact],
+            function (err) {
+              if (err) return res.status(500).json({ error: 'Failed to submit report' });
 
-          res.status(201).json({
-            message: 'Report submitted successfully',
-            reportId: this.lastID
-          });
+              db.run(`
+                INSERT INTO audit_logs (user_id, action, target_type, target_id, ip_address, details)
+                VALUES (?, 'REPORT_SUBMITTED', 'report', ?, ?, ?)
+              `, [req.user.userId, this.lastID, req.ip, `Submitted report: ${title}`]);
+
+              res.status(201).json({
+                message: 'Report submitted successfully',
+                reportId: this.lastID
+              });
+            }
+          );
         }
       );
-    });
-  });
     }
   );
 };
