@@ -57,6 +57,8 @@ app.use((req, res, next) => {
 // HTTP request logging
 app.use(morgan('dev'));
 
+app.disable('x-powered-by');
+
 // Initialize database tables
 initDb();
 
