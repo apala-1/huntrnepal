@@ -26,5 +26,23 @@ router.put('/profile', authenticate, (req, res) => {
     }
   );
 });
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  // BAD: Math.random() is predictable, not cryptographically random
+  const resetToken = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+  
+  const db = require('../config/database');
+  db.run(
+    'UPDATE users SET mfa_secret = ? WHERE email = ?',
+    [resetToken, email]
+  );
+  
+  // In real app would send email - here we return it directly (another vuln: token in response)
+  res.json({ 
+    message: 'Reset token sent',
+    debug_token: resetToken  // ⚠️ NEVER expose token in response
+  });
+});
 
 module.exports = router;

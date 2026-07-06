@@ -21,6 +21,17 @@ const submitReport = (req, res) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       if (!program) return res.status(404).json({ error: 'Program not found or inactive' });
 
+      db.get(`
+        SELECT c.user_id FROM bounty_programs bp
+        JOIN companies c ON bp.company_id = c.id
+        WHERE bp.id = ?
+      `, [program_id], (err, programOwner) => {
+        if (programOwner && programOwner.user_id === req.user.userId) {
+          return res.status(403).json({ 
+            error: 'You cannot submit reports against your own company program' 
+          });
+        }
+
       db.run(`
         INSERT INTO reports 
         (researcher_id, program_id, title, description, severity, cvss_score, steps_to_reproduce, impact)
@@ -40,6 +51,7 @@ const submitReport = (req, res) => {
           });
         }
       );
+    });
     }
   );
 };
@@ -166,7 +178,27 @@ const getAllReports = (req, res) => {
   });
 };
 
+// ─── LEADERBOARD ─────────────────────────────────────────────────
+const getLeaderboard = (req, res) => {
+  db.all(`
+    SELECT 
+      r.researcher_id,
+      u.username,
+      COUNT(r.id) as total_reports,
+      SUM(CASE WHEN r.status IN ('accepted','resolved') THEN 1 ELSE 0 END) as accepted_reports,
+      SUM(CASE WHEN r.reward_amount IS NOT NULL THEN r.reward_amount ELSE 0 END) as total_earned
+    FROM reports r
+    JOIN users u ON r.researcher_id = u.id
+    GROUP BY r.researcher_id
+    ORDER BY accepted_reports DESC, total_earned DESC
+    LIMIT 20
+  `, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch leaderboard' });
+    res.json({ leaderboard: rows });
+  });
+};
+
 module.exports = {
   submitReport, getMyReports, getReport,
-  getCompanyReports, updateReportStatus, getAllReports
+  getCompanyReports, updateReportStatus, getAllReports, getLeaderboard
 };

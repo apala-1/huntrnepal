@@ -8,17 +8,6 @@ const {
 // Researcher
 router.post('/', authenticate, authorize('researcher'), submitReport);
 router.get('/my', authenticate, authorize('researcher'), getMyReports);
-
-// Company
-router.get('/company', authenticate, authorize('company'), getCompanyReports);
-router.put('/:id/status', authenticate, authorize('company'), updateReportStatus);
-
-// Admin
-router.get('/all', authenticate, authorize('admin'), getAllReports);
-
-// ⚠️ Vulnerable route - no ownership check (IDOR)
-router.get('/:id', authenticate, getReport);
-
 router.get('/leaderboard', (req, res) => {
   const db = require('../config/database');
   db.all(`
@@ -38,5 +27,15 @@ router.get('/leaderboard', (req, res) => {
     res.json({ leaderboard: rows });
   });
 });
+
+// Company
+router.get('/company', authenticate, authorize('company'), getCompanyReports);
+router.put('/:id/status', authenticate, authorize('company'), updateReportStatus);
+
+// Admin
+router.get('/all', authenticate, authorize('admin'), getAllReports);
+
+// ⚠️ Vulnerable route - no ownership check (IDOR)
+router.get('/:id', authenticate, getReport);
 
 module.exports = router;
