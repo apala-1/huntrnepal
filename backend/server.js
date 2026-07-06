@@ -42,6 +42,7 @@ app.use('/api/programs', require('./src/routes/programs'));
 app.use('/api/reports', require('./src/routes/reports'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/payments', require('./src/routes/payments'));
+app.use('/api/comments', require('./src/routes/comments'));
 
 // 404 handler
 app.use((req, res) => {

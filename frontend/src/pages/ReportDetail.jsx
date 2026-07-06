@@ -3,6 +3,90 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 
+const CommentsSection = ({ reportId, userRole }) => {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api.get(`/comments/${reportId}`)
+      .then(res => setComments(res.data.comments))
+      .catch(console.error);
+  }, [reportId]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    setLoading(true);
+    try {
+      await api.post('/comments', { report_id: reportId, comment: newComment });
+      const res = await api.get(`/comments/${reportId}`);
+      setComments(res.data.comments);
+      setNewComment('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+        DISCUSSION
+      </h2>
+
+      {comments.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          No comments yet. Start the discussion.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+          {comments.map(c => (
+            <div key={c.id} style={{
+              padding: '0.75rem',
+              background: 'var(--bg)',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  {c.username}
+                  <span className={`badge badge-${c.role}`} style={{ marginLeft: '0.5rem' }}>
+                    {c.role}
+                  </span>
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                  {new Date(c.created_at).toLocaleString()}
+                </span>
+              </div>
+              {/* ⚠️ INTENTIONAL XSS: dangerouslySetInnerHTML on comments */}
+              <p style={{ fontSize: '0.875rem' }}
+                dangerouslySetInnerHTML={{ __html: c.comment }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+          <textarea
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            placeholder="Add a comment... (visible to researcher and company)"
+            rows={3}
+          />
+        </div>
+        <button type="submit" className="btn btn-outline" 
+          style={{ width: 'auto' }} disabled={loading}>
+          {loading ? 'Posting...' : 'Post Comment'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const PayButton = ({ reportId, rewardAmount }) => {
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
@@ -244,6 +328,7 @@ const ReportDetail = () => {
           </div>
         )}
       </div>
+      <CommentsSection reportId={id} userRole={user?.role} />
     </div>
   );
 };

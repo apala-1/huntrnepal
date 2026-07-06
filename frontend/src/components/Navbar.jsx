@@ -29,6 +29,8 @@ const Navbar = () => {
                   {user.role}
                 </span>
               </li>
+              <li><Link to="/leaderboard">🏆 Leaderboard</Link></li>
+                            <li><Link to="/profile">👤 Profile</Link></li>
               <li>
                 <Link to="/settings">⚙️ {user.username}</Link>
               </li>

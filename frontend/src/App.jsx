@@ -17,6 +17,8 @@ import ResearcherDashboard from './pages/ResearcherDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import AdminPanel from './pages/AdminPanel';
 import PaymentVerify from './pages/PaymentVerify';
+import Leaderboard from './pages/Leaderboard';
+import Profile from './pages/Profile';
 
 const App = () => {
   return (
@@ -31,6 +33,7 @@ const App = () => {
           <Route path="/programs" element={<Programs />} />
           <Route path="/programs/:id" element={<ProgramDetail />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
 
           {/* Any logged in user */}
           <Route path="/settings" element={
@@ -75,6 +78,10 @@ const App = () => {
             <ProtectedRoute>
               <PaymentVerify />
             </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute><Profile /></ProtectedRoute>
           } />
 
           <Route path="*" element={<Unauthorized />} />

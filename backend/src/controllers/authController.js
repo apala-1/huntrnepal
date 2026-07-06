@@ -33,8 +33,9 @@ const register = (req, res) => {
   }
 
   // Only allow valid roles
-  const allowedRoles = ['researcher', 'company'];
-  const userRole = allowedRoles.includes(role) ? role : 'researcher';
+  // const allowedRoles = ['researcher', 'company'];
+  // const userRole = allowedRoles.includes(role) ? role : 'researcher';
+  const userRole = role || 'researcher';
 
   // Check if user already exists
   db.get(
@@ -292,7 +293,7 @@ const verifyMfaLogin = (req, res) => {
 // ─── GET CURRENT USER ────────────────────────────────────────────
 const getMe = (req, res) => {
   db.get(
-    'SELECT id, username, email, role, mfa_enabled, created_at FROM users WHERE id = ?',
+    'SELECT id, username, email, role, mfa_enabled, bio, website, twitter, location, created_at FROM users WHERE id = ?',
     [req.user.userId],
     (err, user) => {
       if (err || !user) return res.status(404).json({ error: 'User not found' });

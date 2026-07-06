@@ -2,25 +2,17 @@ const db = require('../config/database');
 
 // ─── GET ALL ACTIVE PROGRAMS (public) ────────────────────────────
 const getAllPrograms = (req, res) => {
-  // ⚠️ INTENTIONAL VULNERABILITY: Raw string interpolation in search
-  // This is vulnerable to SQL Injection - we will exploit this in pen testing
-  // Fix will be applied in Phase 6 using parameterized queries
   const search = req.query.search || '';
 
-  const query = `
-    SELECT 
-      bp.id, bp.title, bp.description, bp.scope,
-      bp.min_reward, bp.max_reward, bp.is_active, bp.created_at,
-      c.company_name, c.website
-    FROM bounty_programs bp
-    JOIN companies c ON bp.company_id = c.id
-    WHERE bp.is_active = 1
-    AND (bp.title LIKE '%${search}%' OR bp.description LIKE '%${search}%')
-    ORDER BY bp.created_at DESC
-  `;
+  const query = `SELECT bp.id, bp.title, bp.description, bp.scope, bp.min_reward, bp.max_reward, bp.is_active, bp.created_at, c.company_name, c.website FROM bounty_programs bp JOIN companies c ON bp.company_id = c.id WHERE (bp.title LIKE '%${search}%' OR bp.description LIKE '%${search}%') AND bp.is_active = 1 ORDER BY bp.created_at DESC`;
+
+  console.log('Executing query:', query); 
 
   db.all(query, [], (err, programs) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch programs' });
+    if (err) {
+      console.error('Query error:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch programs' });
+    }
     res.json({ programs });
   });
 };

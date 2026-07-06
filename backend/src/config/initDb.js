@@ -18,7 +18,11 @@ const initDb = () => {
         failed_login_attempts INTEGER DEFAULT 0,
         locked_until TEXT,
         created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
+        updated_at TEXT DEFAULT (datetime('now')),
+        bio TEXT DEFAULT '',
+        website TEXT DEFAULT '',
+        twitter TEXT DEFAULT '',
+        location TEXT DEFAULT ''
       )
     `);
 
@@ -108,6 +112,18 @@ const initDb = () => {
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
+
+    db.run(`
+    CREATE TABLE IF NOT EXISTS report_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      report_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      comment TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (report_id) REFERENCES reports(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
 
     console.log('Database tables initialized');
   });
