@@ -32,6 +32,16 @@ const submitReport = (req, res) => {
           });
         }
 
+      db.get(
+        'SELECT id FROM reports WHERE researcher_id = ? AND program_id = ? AND title = ?',
+        [req.user.userId, program_id, title],
+        (err, duplicate) => {
+          if (duplicate) {
+            return res.status(409).json({ 
+              error: 'You have already submitted a report with this title for this program. Duplicate reports are not accepted.' 
+            });
+          }
+
       db.run(`
         INSERT INTO reports 
         (researcher_id, program_id, title, description, severity, cvss_score, steps_to_reproduce, impact)
@@ -52,6 +62,7 @@ const submitReport = (req, res) => {
         }
       );
     });
+  });
     }
   );
 };

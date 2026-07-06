@@ -79,12 +79,11 @@ const ForgotPassword = () => {
               <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
                 Enter Reset Token
               </h2>
-              {/* ⚠️ VULNERABILITY VISIBLE IN UI: Token shown in response */}
               {debugToken && (
                 <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
-                  ⚠️ Security Issue: Token exposed in API response: <strong>{debugToken}</strong>
+                  Token: <strong>{debugToken}</strong>
                   <br />
-                  <small>In a secure app, this would only be sent via email</small>
+                  
                 </div>
               )}
               {error && <div className="alert alert-error">{error}</div>}
