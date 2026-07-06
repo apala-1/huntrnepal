@@ -33,9 +33,8 @@ const register = (req, res) => {
   }
 
   // Only allow valid roles
-  // const allowedRoles = ['researcher', 'company'];
-  // const userRole = allowedRoles.includes(role) ? role : 'researcher';
-  const userRole = role || 'researcher';
+  const allowedRoles = ['researcher', 'company'];
+  const userRole = allowedRoles.includes(role) ? role : 'researcher';
 
   // Check if user already exists
   db.get(
