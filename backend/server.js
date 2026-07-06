@@ -9,7 +9,21 @@ const initDb = require('./src/config/initDb');
 const app = express();
 
 // Security headers
-app.use(helmet());
+// ✅ Security headers via Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true
+  }
+}));
 
 // CORS - only allow our React frontend
 app.use(cors({

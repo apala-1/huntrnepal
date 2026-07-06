@@ -16,12 +16,14 @@ const ForgotPassword = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/auth/forgot-password', { email });
-      // ⚠️ VULNERABILITY DEMO: Token comes back in response
-      setDebugToken(res.data.debug_token);
+      await api.post('/auth/forgot-password', { email });
+      // ✅ FIXED: No longer shows token in UI
       setStep('reset');
+      setMessage('Reset instructions sent. Please check your email.');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send reset token');
+      // ✅ FIXED: Generic message prevents user enumeration
+      setStep('reset');
+      setMessage('If this email exists, reset instructions have been sent.');
     } finally {
       setLoading(false);
     }

@@ -362,10 +362,7 @@ const updateProfile = (req, res) => {
 };
 
 // ─── FORGOT PASSWORD ─────────────────────────────────────────────
-// ⚠️ INTENTIONAL VULNERABILITY: 
-// 1. Math.random() is NOT cryptographically secure - token is predictable
-// 2. Token returned directly in response - should only go via email
-// 3. No expiry on reset token
+// ✅ FIXED: Cryptographically secure reset token
 const forgotPassword = (req, res) => {
   const { email } = req.body;
 
@@ -376,27 +373,33 @@ const forgotPassword = (req, res) => {
   db.get('SELECT id, email FROM users WHERE email = ?', [email], (err, user) => {
     if (err) return res.status(500).json({ error: 'Database error' });
 
-    // ⚠️ VULNERABILITY: We confirm whether email exists (user enumeration)
+    // ✅ FIXED: Same response whether email exists or not - prevents user enumeration
     if (!user) {
-      return res.status(404).json({ error: 'No account found with this email' });
+      return res.json({ 
+        message: 'If an account exists with this email, a reset token has been sent.' 
+      });
     }
 
-    // ⚠️ VULNERABILITY: Math.random() is predictable
-    const resetToken = Math.floor(Math.random() * 1000000)
-      .toString()
-      .padStart(6, '0');
+    // ✅ FIXED: crypto.randomBytes generates cryptographically secure token
+    // Previously used Math.random() which is predictable and NOT cryptographically secure
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
 
-    // Store token (reusing mfa_secret column for demo purposes)
-    db.run('UPDATE users SET mfa_secret = ? WHERE id = ?', [resetToken, user.id]);
+    // ✅ FIXED: Store token with 30 minute expiry
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    db.run(
+      'UPDATE users SET mfa_secret = ?, locked_until = ? WHERE id = ?',
+      [resetToken, expiresAt, user.id]
+    );
 
     logAudit(user.id, 'PASSWORD_RESET_REQUESTED', 'user', user.id,
-      req.ip, null, 'Password reset token generated');
+      req.ip, null, 'Secure password reset token generated');
 
-    // ⚠️ VULNERABILITY: Token returned in API response instead of sent via email only
+    // ✅ FIXED: Token NOT returned in response - would be sent via email in production
     res.json({
-      message: 'Password reset token generated',
-      debug_token: resetToken,  // NEVER do this in production
-      note: 'In production this would be sent to email only'
+      message: 'If an account exists with this email, a reset token has been sent.',
+      // debug_token REMOVED - never expose tokens in API responses
     });
   });
 };
@@ -414,14 +417,19 @@ const resetPassword = (req, res) => {
       if (err) return res.status(500).json({ error: 'Database error' });
       if (!user) return res.status(401).json({ error: 'Invalid or expired token' });
 
+      // ✅ Check token hasn't expired (stored in locked_until)
+      if (user.locked_until && new Date(user.locked_until) < new Date()) {
+        return res.status(401).json({ error: 'Reset token has expired. Please request a new one.' });
+      }
+
       const newHash = await bcrypt.hash(newPassword, 12);
       db.run(
-        'UPDATE users SET password_hash = ?, mfa_secret = NULL WHERE id = ?',
+        'UPDATE users SET password_hash = ?, mfa_secret = NULL, locked_until = NULL WHERE id = ?',
         [newHash, user.id]
       );
 
       logAudit(user.id, 'PASSWORD_RESET_COMPLETED', 'user', user.id,
-        req.ip, null, 'Password reset successfully');
+        req.ip, null, 'Password reset with secure token');
 
       res.json({ message: 'Password reset successfully. Please log in.' });
     });
