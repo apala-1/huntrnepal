@@ -19,6 +19,7 @@ import AdminPanel from './pages/AdminPanel';
 import PaymentVerify from './pages/PaymentVerify';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword';
 
 const App = () => {
   return (
@@ -30,6 +31,7 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/programs" element={<Programs />} />
           <Route path="/programs/:id" element={<ProgramDetail />} />
           <Route path="/unauthorized" element={<Unauthorized />} />

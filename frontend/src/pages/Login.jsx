@@ -175,6 +175,10 @@ const Login = () => {
 
         <div className="auth-footer">
           Don't have an account? <Link to="/register">Create one</Link>
+          <br />
+          <Link to="/forgot-password" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Forgot password?
+          </Link>
         </div>
       </div>
     </div>
