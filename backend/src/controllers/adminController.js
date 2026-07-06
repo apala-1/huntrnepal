@@ -2,6 +2,12 @@ const db = require('../config/database');
 
 // ─── GET ALL USERS ────────────────────────────────────────────────
 const getAllUsers = (req, res) => {
+  // Log admin data access
+  db.run(`
+    INSERT INTO audit_logs (user_id, action, target_type, ip_address, details)
+    VALUES (?, 'ADMIN_USERS_ACCESSED', 'users', ?, 'Admin viewed full user list')
+  `, [req.user.userId, req.ip]);
+  
   db.all(`
     SELECT 
       u.id, u.username, u.email, u.role, 
