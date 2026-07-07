@@ -5,18 +5,27 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const initDb = require('./src/config/initDb');
+const path = require('path');
 
 const app = express();
 
 // Security headers
 // ✅ Security headers via Helmet
 app.use(helmet({
+  crossOriginResourcePolicy: {
+    policy: "cross-origin"
+  },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https:",
+        "http://localhost:5000"
+      ]
     }
   },
   hsts: {
@@ -30,6 +39,8 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true  // Allow cookies to be sent cross-origin
 }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Body parsing
 // ✅ Limit request size to prevent DoS via large payloads

@@ -6,8 +6,9 @@ const {
   register, login, logout,
   setupMfa, verifyMfa, verifyMfaLogin,
   getMe, changePassword, updateProfile,
-  forgotPassword, resetPassword
+  forgotPassword, resetPassword, uploadAvatar
 } = require('../controllers/authController');
+const upload = require('../middleware/upload');
 
 // ✅ FIXED: Rate limiting prevents brute force attacks
 // Per brief requirement: lockout after 10-15 attempts

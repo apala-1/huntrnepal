@@ -10,6 +10,9 @@ const Profile = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar ? `http://localhost:5000${user.avatar}` : null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   useEffect(() => {
     api.get('/auth/me').then(res => {
@@ -38,6 +41,31 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Client-side preview
+    setAvatarPreview(URL.createObjectURL(file));
+
+    // Upload immediately
+    setAvatarLoading(true);
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const res = await api.post('/auth/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setMessage('Profile picture updated');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to upload image');
+      setAvatarPreview(null);
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   return (
     <div className="container" style={{ padding: '2rem 1.5rem', maxWidth: '600px' }}>
       <h1 style={{ marginBottom: '0.3rem' }}>Edit Profile</h1>
@@ -49,31 +77,42 @@ const Profile = () => {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '1rem',
-          marginBottom: '2rem',
-          paddingBottom: '1.5rem',
-          borderBottom: '1px solid var(--border)'
-        }}>
-          <div style={{
-            width: '64px', height: '64px',
-            borderRadius: '50%',
-            background: 'var(--primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', fontWeight: 700, color: 'white'
-          }}>
-            {user?.username?.[0]?.toUpperCase()}
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{user?.username}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{user?.email}</div>
-            <span className={`badge badge-${user?.role}`} style={{ marginTop: '0.3rem', display: 'inline-block' }}>
-              {user?.role}
-            </span>
-          </div>
-        </div>
+        <div 
+  style={{
+    width: '80px', height: '80px',
+    borderRadius: '50%',
+    background: avatarPreview ? 'none' : 'var(--primary)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '2rem', fontWeight: 700, color: 'white',
+    overflow: 'hidden', cursor: 'pointer',
+    border: '2px solid var(--border)',
+    position: 'relative'
+  }}
+  onClick={() => document.getElementById('avatar-input').click()}
+>
+  {avatarPreview ? (
+    <img src={avatarPreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+  ) : (
+    user?.username?.[0]?.toUpperCase()
+  )}
+  {avatarLoading && (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'white', fontSize: '0.75rem'
+    }}>
+      ...
+    </div>
+  )}
+</div>
+<input
+  id="avatar-input"
+  type="file"
+  accept="image/jpeg,image/png,image/webp"
+  onChange={handleAvatarChange}
+  style={{ display: 'none' }}
+/>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

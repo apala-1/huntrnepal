@@ -292,7 +292,7 @@ const verifyMfaLogin = (req, res) => {
 // ─── GET CURRENT USER ────────────────────────────────────────────
 const getMe = (req, res) => {
   db.get(
-    'SELECT id, username, email, role, mfa_enabled, bio, website, twitter, location, created_at FROM users WHERE id = ?',
+    'SELECT id, username, avatar, email, role, mfa_enabled, bio, website, twitter, location, created_at FROM users WHERE id = ?',
     [req.user.userId],
     (err, user) => {
       if (err || !user) return res.status(404).json({ error: 'User not found' });
