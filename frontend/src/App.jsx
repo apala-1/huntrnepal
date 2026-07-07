@@ -19,6 +19,7 @@ import AdminPanel from './pages/AdminPanel';
 import PaymentVerify from './pages/PaymentVerify';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
+import EditProgram from './pages/EditProgram';
 import ForgotPassword from './pages/ForgotPassword';
 
 const App = () => {
@@ -44,6 +45,12 @@ const App = () => {
           } />
           <Route path="/reports/:id" element={
             <ProtectedRoute><ReportDetail /></ProtectedRoute>
+          } />
+
+          <Route path="/programs/:id/edit" element={
+            <ProtectedRoute roles={['company']}>
+              <EditProgram />
+            </ProtectedRoute>
           } />
 
           {/* Researcher only */}

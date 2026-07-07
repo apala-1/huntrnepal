@@ -161,5 +161,42 @@ const getProgramEncryptionKey = (req, res) => {
     res.json({ encryptionKey: result.encryption_key });
   });
 };
+const deleteProgram = (req, res) => {
+  const { id } = req.params;
 
-module.exports = { getAllPrograms, getProgram, createProgram, updateProgram, getMyPrograms, getCompanyEncryptionKey, getProgramEncryptionKey };
+  // Verify ownership
+  db.get(`
+    SELECT bp.id FROM bounty_programs bp
+    JOIN companies c ON bp.company_id = c.id
+    WHERE bp.id = ? AND c.user_id = ?
+  `, [id, req.user.userId], (err, program) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!program) return res.status(403).json({ error: 'You do not own this program' });
+
+    // Check no accepted/paid reports exist
+    db.get(
+      "SELECT id FROM reports WHERE program_id = ? AND status IN ('accepted', 'resolved')",
+      [id],
+      (err, activeReport) => {
+        if (activeReport) {
+          return res.status(400).json({ 
+            error: 'Cannot delete program with accepted or resolved reports' 
+          });
+        }
+
+        db.run('DELETE FROM bounty_programs WHERE id = ?', [id], (err) => {
+          if (err) return res.status(500).json({ error: 'Failed to delete program' });
+
+          db.run(`
+            INSERT INTO audit_logs (user_id, action, target_type, target_id, ip_address, details)
+            VALUES (?, 'PROGRAM_DELETED', 'program', ?, ?, ?)
+          `, [req.user.userId, id, req.ip, `Program #${id} deleted`]);
+
+          res.json({ message: 'Program deleted successfully' });
+        });
+      }
+    );
+  });
+};
+
+module.exports = { getAllPrograms, getProgram, createProgram, updateProgram, getMyPrograms, getCompanyEncryptionKey, getProgramEncryptionKey, deleteProgram };
