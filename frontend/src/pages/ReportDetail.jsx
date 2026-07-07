@@ -2,6 +2,105 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import { decryptReportData } from '../utils/encryption';
+
+const EncryptedPocSection = ({ encryptedPoc }) => {
+  const [key, setKey] = useState('');
+  const [decrypted, setDecrypted] = useState(null);
+  const [error, setError] = useState('');
+  const [keyLoading, setKeyLoading] = useState(false);
+
+  const handleAutoDecrypt = async () => {
+    setKeyLoading(true);
+    try {
+      const res = await api.get('/programs/my/encryption-key');
+      const result = decryptReportData(JSON.parse(encryptedPoc), res.data.encryptionKey);
+      if (result) {
+        setDecrypted(result);
+        setError('');
+      } else {
+        setError('Decryption failed — wrong key or data tampered');
+      }
+    } catch (e) {
+      setError('Could not retrieve encryption key');
+    } finally {
+      setKeyLoading(false);
+    }
+  };
+
+  if (!encryptedPoc) return null;
+
+  return (
+    <div className="card" style={{ borderColor: 'rgba(99,102,241,0.3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+          PROOF OF CONCEPT
+        </h2>
+        <span style={{
+          background: 'rgba(99,102,241,0.15)',
+          color: 'var(--primary)',
+          padding: '0.2rem 0.6rem',
+          borderRadius: '999px',
+          fontSize: '0.7rem',
+          fontWeight: 600
+        }}>
+          E2E ENCRYPTED
+        </span>
+      </div>
+
+      {!decrypted ? (
+        <div>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+            This PoC was encrypted by the researcher before submission. 
+            Click below to decrypt using your company's private key.
+          </p>
+          {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+          <button
+            className="btn btn-primary"
+            onClick={handleAutoDecrypt}
+            disabled={keyLoading}
+            style={{ width: 'auto' }}
+          >
+            {keyLoading ? 'Decrypting...' : 'Decrypt PoC'}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
+            Decrypted successfully using your company key
+          </div>
+          {decrypted.poc_code && (
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                PoC Code:
+              </p>
+              <pre style={{
+                background: 'var(--bg)',
+                padding: '1rem',
+                borderRadius: 'var(--radius)',
+                overflow: 'auto',
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                marginBottom: '1rem'
+              }}>
+                {decrypted.poc_code}
+              </pre>
+            </div>
+          )}
+          {decrypted.poc_url && (
+            <p style={{ fontSize: '0.875rem' }}>
+              Reference: <a href={decrypted.poc_url} target="_blank" rel="noreferrer"
+                style={{ color: 'var(--primary)' }}>{decrypted.poc_url}</a>
+            </p>
+          )}
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+            Decrypted at: {new Date().toLocaleString()} — This data was never sent to HuntrNepal servers
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CommentsSection = ({ reportId, userRole }) => {
   const [comments, setComments] = useState([]);
@@ -278,6 +377,24 @@ const ReportDetail = () => {
           </h2>
           <p style={{ lineHeight: 1.8 }}>{report.impact}</p>
         </div>
+
+        {/* Show encrypted PoC section for company users */}
+{user?.role === 'company' && report.encrypted_poc && (
+  <EncryptedPocSection encryptedPoc={report.encrypted_poc} />
+)}
+
+{/* Show notice for researchers */}
+{user?.role === 'researcher' && report.encrypted_poc && (
+  <div className="card" style={{ borderColor: 'rgba(99,102,241,0.3)' }}>
+    <h2 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+      PROOF OF CONCEPT
+    </h2>
+    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+      Your PoC data is end-to-end encrypted. HuntrNepal cannot read it. 
+      Only the company can decrypt it with their private key.
+    </p>
+  </div>
+)}
 
         {/* Company review panel */}
         {user?.role === 'company' && (
