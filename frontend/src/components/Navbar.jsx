@@ -152,7 +152,7 @@ const Navbar = () => {
                   onMouseEnter={() => setIsHovered('leader')}
                   onMouseLeave={() => setIsHovered(null)}
                 >
-                  🏆 Leaderboard
+                   Leaderboard
                 </Link>
               </li>
               <li>
@@ -162,7 +162,7 @@ const Navbar = () => {
                   onMouseEnter={() => setIsHovered('profile')}
                   onMouseLeave={() => setIsHovered(null)}
                 >
-                  👤 Profile
+                   Profile
                 </Link>
               </li>
               <li>
@@ -172,7 +172,7 @@ const Navbar = () => {
                   onMouseEnter={() => setIsHovered('settings')}
                   onMouseLeave={() => setIsHovered(null)}
                 >
-                  ⚙️ {user.username}
+                   {user.username}
                 </Link>
               </li>
               <li>
