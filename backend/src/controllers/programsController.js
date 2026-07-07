@@ -135,4 +135,31 @@ const getMyPrograms = (req, res) => {
   });
 };
 
-module.exports = { getAllPrograms, getProgram, createProgram, updateProgram, getMyPrograms };
+// Get company's encryption key (only for the company owner)
+const getCompanyEncryptionKey = (req, res) => {
+  db.get(
+    'SELECT encryption_key FROM companies WHERE user_id = ?',
+    [req.user.userId],
+    (err, company) => {
+      if (err || !company) return res.status(404).json({ error: 'Company not found' });
+      res.json({ encryptionKey: company.encryption_key });
+    }
+  );
+};
+
+// Get a program's company encryption key (for researchers to encrypt with)
+const getProgramEncryptionKey = (req, res) => {
+  const { id } = req.params;
+  db.get(`
+    SELECT c.encryption_key 
+    FROM bounty_programs bp 
+    JOIN companies c ON bp.company_id = c.id 
+    WHERE bp.id = ?
+  `, [id], (err, result) => {
+    if (err || !result) return res.status(404).json({ error: 'Program not found' });
+    // Only give the key to authenticated users (researchers need it to encrypt)
+    res.json({ encryptionKey: result.encryption_key });
+  });
+};
+
+module.exports = { getAllPrograms, getProgram, createProgram, updateProgram, getMyPrograms, getCompanyEncryptionKey, getProgramEncryptionKey };

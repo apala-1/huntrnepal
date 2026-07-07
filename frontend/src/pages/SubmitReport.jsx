@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../api/axios';
+import { encryptReportData } from '../utils/encryption';
 
 const SEVERITIES = [
   { value: 'critical', label: '🔴 Critical', desc: 'Remote code execution, authentication bypass' },
@@ -23,7 +24,9 @@ const SubmitReport = () => {
     cvss_score: '',
     description: '',
     steps_to_reproduce: '',
-    impact: ''
+    impact: '',
+    poc_code: '',         // New: sensitive PoC code
+    poc_url: ''          // New: proof URL  
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,13 +45,29 @@ const SubmitReport = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.severity) return setError('Please select a severity level');
-    if (formData.steps_to_reproduce.length < 50) {
-      return setError('Steps to reproduce must be at least 50 characters');
-    }
 
     setLoading(true);
     try {
-      const res = await api.post('/reports', formData);
+      let submitData = { ...formData };
+
+      // Encrypt sensitive PoC data if program selected
+      if (formData.program_id && (formData.poc_code || formData.poc_url)) {
+        const keyRes = await api.get(`/programs/${formData.program_id}/encryption-key`);
+        const encryptionKey = keyRes.data.encryptionKey;
+
+        const sensitiveData = {
+          poc_code: formData.poc_code,
+          poc_url: formData.poc_url,
+          encrypted_at: new Date().toISOString()
+        };
+
+        const encrypted = encryptReportData(sensitiveData, encryptionKey);
+        submitData.encrypted_poc = JSON.stringify(encrypted);
+        submitData.poc_code = '[ENCRYPTED - Only company can decrypt]';
+        submitData.poc_url = '[ENCRYPTED]';
+      }
+
+      const res = await api.post('/reports', submitData);
       navigate(`/reports/${res.data.reportId}`, {
         state: { message: 'Report submitted successfully!' }
       });
@@ -203,6 +222,50 @@ const SubmitReport = () => {
             />
           </div>
         </div>
+
+        {/* Encrypted PoC Section */}
+<div className="card" style={{ marginBottom: '1.5rem', borderColor: 'rgba(99,102,241,0.3)' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+    <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
+      PROOF OF CONCEPT
+    </h2>
+    <span style={{
+      background: 'rgba(99,102,241,0.15)',
+      color: 'var(--primary)',
+      padding: '0.2rem 0.6rem',
+      borderRadius: '999px',
+      fontSize: '0.7rem',
+      fontWeight: 600
+    }}>
+      END-TO-END ENCRYPTED
+    </span>
+  </div>
+  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+    PoC details are encrypted in your browser before transmission. 
+    HuntrNepal servers never see this data — only the company can decrypt it.
+  </p>
+
+  <div className="form-group">
+    <label>PoC Code / Payload (optional)</label>
+    <textarea
+      name="poc_code"
+      value={formData.poc_code}
+      onChange={handleChange}
+      placeholder={"# Example exploit code\nimport requests\n\n# Your PoC here..."}
+      rows={5}
+      style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+    />
+  </div>
+  <div className="form-group" style={{ marginBottom: 0 }}>
+    <label>Reference URL (optional)</label>
+    <input
+      name="poc_url"
+      value={formData.poc_url}
+      onChange={handleChange}
+      placeholder="https://your-poc-demo.com"
+    />
+  </div>
+</div>
 
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>

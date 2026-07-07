@@ -37,9 +37,12 @@ const submitReport = (req, res) => {
           // Insert the report
           db.run(`
             INSERT INTO reports 
-            (researcher_id, program_id, title, description, severity, cvss_score, steps_to_reproduce, impact)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `, [req.user.userId, program_id, title, description, severity, cvss_score || null, steps_to_reproduce, impact],
+            (researcher_id, program_id, title, description, severity, cvss_score, 
+            steps_to_reproduce, impact, encrypted_poc)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [req.user.userId, program_id, title, description, severity, 
+              cvss_score || null, steps_to_reproduce, impact, 
+              req.body.encrypted_poc || null],
             function (err) {
               if (err) return res.status(500).json({ error: 'Failed to submit report' });
 
