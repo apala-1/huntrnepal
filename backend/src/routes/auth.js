@@ -48,6 +48,12 @@ router.post('/login', loginLimiter, login);
 router.post('/forgot-password', resetLimiter, forgotPassword);
 router.post('/reset-password', resetLimiter, resetPassword);
 router.post('/mfa/login', mfaLimiter, verifyMfaLogin);
+router.post(
+  '/avatar',
+  authenticate,
+  upload.single('avatar'),
+  uploadAvatar
+);
 
 // Protected routes
 router.post('/logout', authenticate, logout);

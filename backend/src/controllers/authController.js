@@ -439,4 +439,31 @@ const resetPassword = (req, res) => {
     });
 };
 
-module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe, changePassword, updateProfile, forgotPassword, resetPassword };
+const uploadAvatar = (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      error: 'No file uploaded or invalid file type'
+    });
+  }
+
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+  db.run(
+    'UPDATE users SET avatar = ? WHERE id = ?',
+    [avatarUrl, req.user.userId],
+    (err) => {
+      if (err) {
+        return res.status(500).json({
+          error: 'Failed to save avatar'
+        });
+      }
+
+      res.json({
+        message: 'Avatar updated',
+        avatarUrl
+      });
+    }
+  );
+};
+
+module.exports = { register, login, logout, setupMfa, verifyMfa, verifyMfaLogin, getMe, changePassword, updateProfile, forgotPassword, resetPassword, uploadAvatar };
