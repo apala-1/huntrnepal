@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const db = require('../config/database');
+const { sendPasswordResetEmail } = require('../utils/emailService');
 
 // ─── Helper: Create JWT ───────────────────────────────────────────
 const createToken = (userId, role) => {
@@ -363,44 +364,47 @@ const updateProfile = (req, res) => {
 
 // ─── FORGOT PASSWORD ─────────────────────────────────────────────
 // ✅ FIXED: Cryptographically secure reset token
-const forgotPassword = (req, res) => {
+const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  db.get('SELECT id, email FROM users WHERE email = ?', [email], (err, user) => {
+  db.get('SELECT id, email, username FROM users WHERE email = ?', [email], async (err, user) => {
     if (err) return res.status(500).json({ error: 'Database error' });
 
-    // ✅ FIXED: Same response whether email exists or not - prevents user enumeration
-    if (!user) {
-      return res.json({ 
-        message: 'If an account exists with this email, a reset token has been sent.' 
-      });
-    }
+    // ✅ Generic response prevents user enumeration
+    const genericResponse = { 
+      message: 'If an account exists with this email, reset instructions have been sent.' 
+    };
 
-    // ✅ FIXED: crypto.randomBytes generates cryptographically secure token
-    // Previously used Math.random() which is predictable and NOT cryptographically secure
+    if (!user) return res.json(genericResponse);
+
+    // ✅ Cryptographically secure 6-digit token
     const crypto = require('crypto');
-    const resetToken = crypto.randomBytes(32).toString('hex');
-
-    // ✅ FIXED: Store token with 30 minute expiry
+    const resetToken = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     db.run(
       'UPDATE users SET mfa_secret = ?, locked_until = ? WHERE id = ?',
-      [resetToken, expiresAt, user.id]
+      [resetToken, expiresAt, user.id],
+      async (err) => {
+        if (err) return res.status(500).json({ error: 'Failed to generate reset token' });
+
+        try {
+          await sendPasswordResetEmail(user.email, user.username, resetToken);
+          
+          logAudit(user.id, 'PASSWORD_RESET_EMAIL_SENT', 'user', user.id,
+            req.ip, null, 'Password reset email sent via nodemailer');
+
+          res.json(genericResponse);
+        } catch (emailErr) {
+          console.error('Email send failed:', emailErr.message);
+          res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
+        }
+      }
     );
-
-    logAudit(user.id, 'PASSWORD_RESET_REQUESTED', 'user', user.id,
-      req.ip, null, 'Secure password reset token generated');
-
-    // ✅ FIXED: Token NOT returned in response - would be sent via email in production
-    res.json({
-      message: 'If an account exists with this email, a reset token has been sent.',
-      // debug_token REMOVED - never expose tokens in API responses
-    });
   });
 };
 

@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { sendReportStatusEmail } = require('../utils/emailService');
 
 // ─── SUBMIT REPORT (researcher only) ─────────────────────────────
 const submitReport = (req, res) => {
@@ -169,11 +170,25 @@ const updateReportStatus = (req, res) => {
     `, [status, reward_amount || null, id], (err) => {
       if (err) return res.status(500).json({ error: 'Failed to update report' });
 
-      db.run(`
-        INSERT INTO audit_logs (user_id, action, target_type, target_id, ip_address, details)
-        VALUES (?, 'REPORT_STATUS_UPDATED', 'report', ?, ?, ?)
-      `, [req.user.userId, id, req.ip, `Status changed to: ${status}`]);
-
+      // Send email notification to researcher
+      db.get(
+        'SELECT u.email, u.username, r.reward_amount FROM reports r JOIN users u ON r.researcher_id = u.id WHERE r.id = ?',
+        [id],
+        async (err, data) => {
+          if (data) {
+            try {
+              await sendReportStatusEmail(
+                data.email, data.username, 
+                req.body.title || 'Your report',
+                status, reward_amount
+              );
+            } catch (e) {
+              console.error('Status email failed:', e.message);
+            }
+          }
+        }
+      );
+      
       res.json({ message: 'Report updated successfully' });
     });
   });
