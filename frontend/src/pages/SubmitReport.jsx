@@ -4,11 +4,11 @@ import api from '../api/axios';
 import { encryptReportData } from '../utils/encryption';
 
 const SEVERITIES = [
-  { value: 'critical', label: '🔴 Critical', desc: 'Remote code execution, authentication bypass' },
-  { value: 'high',     label: '🟠 High',     desc: 'Privilege escalation, sensitive data exposure' },
-  { value: 'medium',   label: '🟡 Medium',   desc: 'CSRF, stored XSS, IDOR' },
-  { value: 'low',      label: '🟢 Low',      desc: 'Open redirect, information disclosure' },
-  { value: 'info',     label: '⚪ Info',     desc: 'Best practice recommendations' },
+  { value: 'critical', label: '🔴 Critical', desc: 'RCE, Auth Bypass, SQLi', color: '#EF4444' },
+  { value: 'high',     label: '🟠 High',     desc: 'Privesc, Sensitive Data leak', color: '#F97316' },
+  { value: 'medium',   label: '🟡 Medium',   desc: 'CSRF, Stored XSS, IDOR', color: '#F59E0B' },
+  { value: 'low',      label: '🟢 Low',      desc: 'Open Redirect, Info Leak', color: '#14B8A6' },
+  { value: 'info',     label: '⚪ Info',     desc: 'Best practices & hardening', color: '#94A3B8' },
 ];
 
 const SubmitReport = () => {
@@ -25,8 +25,8 @@ const SubmitReport = () => {
     description: '',
     steps_to_reproduce: '',
     impact: '',
-    poc_code: '',         // New: sensitive PoC code
-    poc_url: ''          // New: proof URL  
+    poc_code: '',         
+    poc_url: ''          
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ const SubmitReport = () => {
   useEffect(() => {
     api.get('/programs')
       .then(res => setPrograms(res.data.programs))
-      .catch(() => setError('Failed to load programs'));
+      .catch(() => setError('System Alert: Could not synchronize bounty programs'));
   }, []);
 
   const handleChange = (e) => {
@@ -44,13 +44,12 @@ const SubmitReport = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.severity) return setError('Please select a severity level');
+    if (!formData.severity) return setError('Mandatory field: Please categorize vulnerability severity');
 
     setLoading(true);
     try {
       let submitData = { ...formData };
 
-      // Encrypt sensitive PoC data if program selected
       if (formData.program_id && (formData.poc_code || formData.poc_url)) {
         const keyRes = await api.get(`/programs/${formData.program_id}/encryption-key`);
         const encryptionKey = keyRes.data.encryptionKey;
@@ -63,219 +62,350 @@ const SubmitReport = () => {
 
         const encrypted = encryptReportData(sensitiveData, encryptionKey);
         submitData.encrypted_poc = JSON.stringify(encrypted);
-        submitData.poc_code = '[ENCRYPTED - Only company can decrypt]';
+        submitData.poc_code = '[ENCRYPTED - SECURE HANDSHAKE COMPLETED]';
         submitData.poc_url = '[ENCRYPTED]';
       }
 
       const res = await api.post('/reports', submitData);
       navigate(`/reports/${res.data.reportId}`, {
-        state: { message: 'Report submitted successfully!' }
+        state: { message: 'Infiltration report submitted for triage!' }
       });
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit report');
+      setError(err.response?.data?.error || 'Transmission failed: Security gateway timeout');
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Shared Premium Theme ──
+  const theme = {
+    bg: '#0F172A',
+    surface: '#162033',
+    border: 'rgba(255,255,255,0.08)',
+    primary: '#3B82F6',
+    secondary: '#1E293B',
+    accent: '#14B8A6',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#94A3B8',
+    error: '#EF4444',
+    radius: '16px',
+    shadow: '0 10px 30px -10px rgba(0,0,0,0.5)',
+    transition: 'all 0.3s ease'
+  };
+
+  const cardStyle = {
+    background: theme.surface,
+    border: `1px solid ${theme.border}`,
+    borderRadius: theme.radius,
+    padding: '2.5rem',
+    marginBottom: '2rem',
+    boxShadow: theme.shadow
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '0.875rem 1.25rem',
+    background: '#0F172A',
+    border: `1px solid ${theme.border}`,
+    borderRadius: '12px',
+    color: theme.textPrimary,
+    fontSize: '1rem',
+    outline: 'none',
+    transition: theme.transition,
+    boxSizing: 'border-box'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '0.75rem',
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    color: theme.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
+  };
+
   return (
-    <div className="container" style={{ padding: '2rem 1.5rem', maxWidth: '760px' }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to="/programs" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.875rem' }}>
-          ← Back to Programs
-        </Link>
-      </div>
-
-      <h1 style={{ marginBottom: '0.3rem' }}>Submit Vulnerability Report</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-        Be detailed and professional. Better reports get reviewed faster.
-      </p>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      <form onSubmit={handleSubmit}>
-
-        {/* Program selection */}
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-muted)' }}>
-            TARGET PROGRAM
-          </h2>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Select Program</label>
-            <select name="program_id" value={formData.program_id} onChange={handleChange} required>
-              <option value="">Choose a bounty program...</option>
-              {programs.map(p => (
-                <option key={p.id} value={p.id}>{p.company_name} — {p.title}</option>
-              ))}
-            </select>
-          </div>
+    <div style={{ 
+      background: theme.bg, 
+      minHeight: '100vh', 
+      padding: '4rem 1.5rem', 
+      color: theme.textPrimary,
+      fontFamily: "'Inter', sans-serif"
+    }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <Link to="/programs" style={{ 
+            color: theme.textSecondary, 
+            textDecoration: 'none', 
+            fontSize: '0.9rem', 
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Active Programs
+          </Link>
         </div>
 
-        {/* Vulnerability details */}
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-muted)' }}>
-            VULNERABILITY DETAILS
-          </h2>
+        <header style={{ marginBottom: '3.5rem' }}>
+          <h1 style={{ fontSize: '2.75rem', fontWeight: '900', marginBottom: '1rem', letterSpacing: '-0.03em' }}>
+            Report <span style={{ color: theme.primary }}>Vulnerability</span>
+          </h1>
+          <p style={{ color: theme.textSecondary, fontSize: '1.15rem', lineHeight: '1.6' }}>
+            Provide high-fidelity technical evidence to ensure rapid triage and validation.
+          </p>
+        </header>
 
-          <div className="form-group">
-            <label>Vulnerability Title</label>
-            <input
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="e.g. Stored XSS in profile description field"
-              required
-            />
+        {error && (
+          <div style={{ 
+            padding: '1rem 1.5rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', 
+            border: `1px solid ${theme.error}50`, color: theme.error, marginBottom: '2.5rem', 
+            fontWeight: '600', fontSize: '0.95rem' 
+          }}>
+            ⚠️ {error}
           </div>
+        )}
 
-          <div className="form-group">
-            <label>Severity</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {SEVERITIES.map(s => (
-                <label 
-                  key={s.value}
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    border: `1px solid ${formData.severity === s.value ? 'var(--primary)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius)',
-                    cursor: 'pointer',
-                    background: formData.severity === s.value ? 'rgba(99,102,241,0.1)' : 'transparent'
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="severity"
-                    value={s.value}
-                    checked={formData.severity === s.value}
-                    onChange={handleChange}
-                    style={{ accentColor: 'var(--primary)' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{s.label}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.desc}</div>
-                  </div>
-                </label>
-              ))}
+        <form onSubmit={handleSubmit}>
+          {/* Program Selection */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+              <div style={{ padding: '0.6rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '10px', color: theme.primary }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0 }}>Target Environment</h2>
+            </div>
+            <div style={{ marginBottom: 0 }}>
+              <label style={labelStyle}>Authorized Bounty Program</label>
+              <select 
+                name="program_id" 
+                value={formData.program_id} 
+                onChange={handleChange} 
+                required
+                style={inputStyle}
+              >
+                <option value="">Select a validated program...</option>
+                {programs.map(p => (
+                  <option key={p.id} value={p.id}>{p.company_name} — {p.title}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="form-group">
-            <label>CVSS Score (optional)</label>
-            <input
-              name="cvss_score"
-              type="number"
-              min="0"
-              max="10"
-              step="0.1"
-              value={formData.cvss_score}
-              onChange={handleChange}
-              placeholder="e.g. 8.5"
-            />
+          {/* Vulnerability Details */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+              <div style={{ padding: '0.6rem', background: 'rgba(14, 184, 166, 0.1)', borderRadius: '10px', color: theme.accent }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0 }}>Incident Classification</h2>
+            </div>
+
+            <div style={{ marginBottom: '2.5rem' }}>
+              <label style={labelStyle}>Report Headline</label>
+              <input
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="e.g. Broken Access Control on /api/v1/user/settings"
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: '2.5rem' }}>
+              <label style={labelStyle}>Threat Severity</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {SEVERITIES.map(s => (
+                  <label 
+                    key={s.value}
+                    style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      padding: '1rem',
+                      border: `1px solid ${formData.severity === s.value ? s.color : theme.border}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      background: formData.severity === s.value ? `${s.color}10` : 'rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="severity"
+                      value={s.value}
+                      checked={formData.severity === s.value}
+                      onChange={handleChange}
+                      style={{ accentColor: s.color, width: '18px', height: '18px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '700', fontSize: '0.9rem', color: formData.severity === s.value ? s.color : theme.textPrimary }}>{s.label.split(' ')[1]}</div>
+                      <div style={{ fontSize: '0.75rem', color: theme.textSecondary, marginTop: '0.2rem' }}>{s.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '2.5rem' }}>
+              <label style={labelStyle}>CVSS Score (Vector 3.1)</label>
+              <input
+                name="cvss_score"
+                type="number"
+                min="0"
+                max="10"
+                step="0.1"
+                value={formData.cvss_score}
+                onChange={handleChange}
+                placeholder="0.0"
+                style={{ ...inputStyle, width: '120px', textAlign: 'center', fontWeight: '700' }}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Technical Executive Summary</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Provide a clear overview of the finding and the underlying technical flaw..."
+                rows={5}
+                required
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>Description</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Describe the vulnerability. What is it? Where did you find it?"
-              rows={4}
-              required
-            />
+          {/* Reproduction & Impact */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+              <div style={{ padding: '0.6rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '10px', color: theme.warning }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0 }}>Attack Vector & Impact</h2>
+            </div>
+
+            <div style={{ marginBottom: '2.5rem' }}>
+              <label style={labelStyle}>Step-by-Step Reproduction</label>
+              <textarea
+                name="steps_to_reproduce"
+                value={formData.steps_to_reproduce}
+                onChange={handleChange}
+                placeholder={`1. Navigate to target endpoint\n2. Inject payload: <script>document.cookie</script>\n3. Verify execution...`}
+                rows={8}
+                required
+                style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.9rem' }}
+              />
+              <div style={{ textAlign: 'right', marginTop: '0.5rem', fontSize: '0.75rem', color: formData.steps_to_reproduce.length >= 50 ? theme.success : theme.textSecondary }}>
+                {formData.steps_to_reproduce.length} / 50 characters minimum
+              </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Business & Operational Impact</label>
+              <textarea
+                name="impact"
+                value={formData.impact}
+                onChange={handleChange}
+                placeholder="What can an attacker achieve? High-level risk to confidentiality, integrity, or availability."
+                rows={4}
+                required
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Reproduction & Impact */}
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-muted)' }}>
-            REPRODUCTION & IMPACT
-          </h2>
+          {/* Encrypted PoC Section */}
+          <div style={{ ...cardStyle, border: `1px solid ${theme.primary}40`, background: `linear-gradient(to bottom right, ${theme.surface}, ${theme.primary}05)` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{ color: theme.primary }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h2 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: theme.primary }}>E2E Encrypted PoC</h2>
+              <span style={{
+                background: `${theme.primary}15`,
+                color: theme.primary,
+                padding: '0.2rem 0.6rem',
+                borderRadius: '20px',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                border: `1px solid ${theme.primary}30`
+              }}>
+                SECURE HANDSHAKE
+              </span>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: theme.textSecondary, marginBottom: '2rem', lineHeight: '1.6' }}>
+              PoC details are cryptographically sealed in your browser using the company's public key. HuntrNepal servers never see this raw data.
+            </p>
 
-          <div className="form-group">
-            <label>Steps to Reproduce</label>
-            <textarea
-              name="steps_to_reproduce"
-              value={formData.steps_to_reproduce}
-              onChange={handleChange}
-              placeholder={`1. Go to /profile/edit\n2. Enter the following payload in the bio field: <script>alert(1)</script>\n3. Save the profile\n4. Visit any user's profile page\n5. Observe the alert box executes`}
-              rows={7}
-              required
-            />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {formData.steps_to_reproduce.length} chars (minimum 50)
-            </span>
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={labelStyle}>Sensitive PoC Code / Payload</label>
+              <textarea
+                name="poc_code"
+                value={formData.poc_code}
+                onChange={handleChange}
+                placeholder={"# Exploit Script\nimport os\n..."}
+                rows={6}
+                style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.9rem', background: '#0F172A' }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>External Proof URL</label>
+              <input
+                name="poc_url"
+                value={formData.poc_url}
+                onChange={handleChange}
+                placeholder="https://gist.github.com/... or your secure host"
+                style={inputStyle}
+              />
+            </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Impact</label>
-            <textarea
-              name="impact"
-              value={formData.impact}
-              onChange={handleChange}
-              placeholder="What can an attacker achieve? What data is at risk? Who is affected?"
-              rows={3}
-              required
-            />
+          <div style={{ display: 'flex', gap: '1.5rem', marginTop: '3.5rem' }}>
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{ 
+                flex: 2,
+                background: `linear-gradient(135deg, ${theme.primary}, #2563EB)`,
+                color: 'white',
+                padding: '1.125rem',
+                borderRadius: '14px',
+                border: 'none',
+                fontWeight: '800',
+                fontSize: '1.05rem',
+                cursor: 'pointer',
+                boxShadow: `0 8px 25px rgba(59, 130, 246, 0.4)`,
+                transition: theme.transition
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              {loading ? 'Initializing Secure Transmission...' : '🚀 Submit Vulnerability Report'}
+            </button>
+            <Link to="/programs" style={{ 
+              flex: 1,
+              padding: '1.125rem',
+              borderRadius: '14px',
+              border: `1px solid ${theme.border}`,
+              color: theme.textSecondary,
+              textDecoration: 'none',
+              textAlign: 'center',
+              fontWeight: '700',
+              fontSize: '1rem',
+              transition: theme.transition
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              Discard
+            </Link>
           </div>
-        </div>
-
-        {/* Encrypted PoC Section */}
-<div className="card" style={{ marginBottom: '1.5rem', borderColor: 'rgba(99,102,241,0.3)' }}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-    <h2 style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
-      PROOF OF CONCEPT
-    </h2>
-    <span style={{
-      background: 'rgba(99,102,241,0.15)',
-      color: 'var(--primary)',
-      padding: '0.2rem 0.6rem',
-      borderRadius: '999px',
-      fontSize: '0.7rem',
-      fontWeight: 600
-    }}>
-      END-TO-END ENCRYPTED
-    </span>
-  </div>
-  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-    PoC details are encrypted in your browser before transmission. 
-    HuntrNepal servers never see this data — only the company can decrypt it.
-  </p>
-
-  <div className="form-group">
-    <label>PoC Code / Payload (optional)</label>
-    <textarea
-      name="poc_code"
-      value={formData.poc_code}
-      onChange={handleChange}
-      placeholder={"# Example exploit code\nimport requests\n\n# Your PoC here..."}
-      rows={5}
-      style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-    />
-  </div>
-  <div className="form-group" style={{ marginBottom: 0 }}>
-    <label>Reference URL (optional)</label>
-    <input
-      name="poc_url"
-      value={formData.poc_url}
-      onChange={handleChange}
-      placeholder="https://your-poc-demo.com"
-    />
-  </div>
-</div>
-
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Submitting...' : '🐛 Submit Report'}
-          </button>
-          <Link to="/programs" className="btn btn-outline" style={{ textDecoration: 'none', textAlign: 'center' }}>
-            Cancel
-          </Link>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
