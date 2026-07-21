@@ -280,5 +280,5 @@ const deleteUser = (req, res) => {
 
 module.exports = {
   getAllUsers, toggleUserStatus, verifyCompany,
-  getAuditLogs, getStats, getAllPayments
+  getAuditLogs, getStats, getAllPayments, createUser, editUser, deleteUser
 };
