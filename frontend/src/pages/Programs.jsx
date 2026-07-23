@@ -117,7 +117,16 @@ const Programs = () => {
                       <h3 style={{ fontSize: '1.1rem', color: 'var(--text)' }}>
                         {program.title}
                       </h3>
-                      <span className="badge badge-info">Active</span>
+                      <span
+  className="badge"
+  style={{
+    backgroundColor: program.is_active ? "#22c55e20" : "#ef444420",
+    color: program.is_active ? "#22c55e" : "#ef4444",
+    border: `1px solid ${program.is_active ? "#22c55e55" : "#ef444455"}`
+  }}
+>
+  {program.is_active ? "Active" : "Inactive"}
+</span>
                     </div>
                     <p style={{ 
                       color: 'var(--text-muted)', 
